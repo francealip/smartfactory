@@ -75,12 +75,15 @@ async def read_root():
 async def calculate(request: List[KPIRequest], api_key: str = Depends(get_verify_api_key(["ai-agent", "api-layer"]))): # to add or modify the services allowed to access the API, add or remove them from the list in the get_verify_api_key function e.g. get_verify_api_key(["gui", "service1", "service2"])
     ''' print(f"Received request: {request.json()}") '''
 
-    # A list of all static KPI method calculation names is compiled for later use
+    # A list of all static KPI method calculation names is compiled for later use    
     methods = {
     name: getattr(kpi_engine, name)
     for name in dir(kpi_engine)
     if callable(getattr(kpi_engine, name)) and not name.startswith("__")
     }
+    
+    print("METHODS: ", methods)
+
 
     def process_single_request(req: KPIRequest):
         try:
@@ -98,6 +101,9 @@ async def calculate(request: List[KPIRequest], api_key: str = Depends(get_verify
                 raise HTTPException(status_code=404, detail=f"'dynamic_kpi' method not directly callable.")
 
             # If the requested KPI is not in the static methods, call the dynamic KPI method. Otherwise, just call the good old static one
+            
+            print("KPI ID: ", kpiID)
+            
             if kpiID == "no_kpi":
                 result = "Error: KPI name is required"
                 unitOfMeasure = "-"

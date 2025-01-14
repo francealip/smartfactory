@@ -1,4 +1,5 @@
 import pandas as pd
+from datetime import datetime, timedelta
 
 class kpi_dataframe_filter:
     
@@ -80,9 +81,16 @@ class kpi_dataframe_filter:
         - The 'time' column in the dataframe is assumed to be in a format compatible with 
         string comparison or datetime operations.
         """
+        start_period = datetime.strptime(start_period, '%Y-%m-%d')
+        end_period = datetime.strptime(end_period, '%Y-%m-%d')
+        
         if start_period > end_period:
             return ValueError("Error: start_time cannot come after end_time.")
-
+        
+        end_period = end_period + timedelta(days=1)
+        start_period = start_period.strftime('%Y-%m-%d')
+        end_period = end_period.strftime('%Y-%m-%d')
+        
         return df[(df['time'] >= start_period) & (df['time'] <= end_period)]
 
 

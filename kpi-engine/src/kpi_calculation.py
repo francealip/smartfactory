@@ -538,7 +538,7 @@ class kpi_engine:
             try:
                 substitutions[symbol] = data_extraction_method(df=df, kpi=str(symbol)[:-4], machine_id=machine_id, machine_type=machine_type, start_period=start_period, end_period=end_period)
             except ValueError as e:
-                return str(e), "-"
+                return str(e), "-", "-"
 
             result = expr.subs(substitutions)
 
