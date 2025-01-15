@@ -450,7 +450,7 @@ class QueryGenerator:
 
         data = self.llm.invoke(query)
         data = data.content.strip("\n")
-        print(data)
+        #print(data)
         
         if label == "report":
             # data needs to be splitted in order to make two _json_parser calls
@@ -475,19 +475,18 @@ class QueryGenerator:
             data_pred = data_pred.strip(" ,")
             kpi_json_obj, all_kpis = self._json_parser(data_kpi_calc,"kpi_calc")
             pred_json_obj, all_kpis = self._json_parser(data_pred,"predictions")
-            print("\n")
-            print(kpi_json_obj)
-            print(pred_json_obj)
+            #print("\n")
+            #print(kpi_json_obj)
+            #print(pred_json_obj)
             return [kpi_json_obj,pred_json_obj], all_kpis
         else:
             # label == "predictions" or label == "kpi_calc"
             json_obj, all_kpis = self._json_parser(data,label)
-            print("\n")
-            print(json_obj)
+            #print("\n")
+            #print(json_obj)
             return json_obj,all_kpis
         
         
         
 
-        
-    
+       
