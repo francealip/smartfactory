@@ -69,7 +69,15 @@ def create_combined_object(data):
     return combined_objects
 
 def parse_report_for_computed_kpis(report):
-    """Extracts calculated KPIs for each machine, removes units, and converts values to float."""
+    """Extracts calculated KPIs for each machine from the report text, removes units, 
+    and converts values to float.
+    
+    Args:
+        report (str): The report text containing computed KPIs for each machine.
+        
+    Returns:
+        list: A list of dictionaries containing the machine name and computed KPIs.
+    """
     
     machine_sections = re.split(r'-- MACHINE: ', report)[1:]
     
@@ -98,6 +106,7 @@ def parse_report_for_computed_kpis(report):
     return kpi_list
 
 def save_plot(filename):
+    """Save the current plot as an image file in a predefined directory."""
     output_dir = "report_img"
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -123,10 +132,7 @@ def plot_kpi_comparison(kpi_data):
             fig, ax = plt.subplots(figsize=(6, 6))
             wedges, texts, autotexts = ax.pie(kpi_values, labels=machine_names, autopct='%1.1f%%', startangle=90)
 
-            # Add title
             ax.set_title(f'{kpi_name} Comparison', fontsize=17)
-
-            # Save the figure as an image file
             plt.savefig(f'report_img/{kpi_name}_comparison.png')
         else:
             kpi_names.remove(kpi_name)
@@ -134,6 +140,7 @@ def plot_kpi_comparison(kpi_data):
     return kpi_names
     
 def plot_line(data, x, y, title="", **kwargs):
+    """Create a line plot for the given data."""
     plt.figure(figsize=(10, 6))
     sns.lineplot(data=data, x=x, y=y, **kwargs)
     plt.grid(True)  
@@ -144,6 +151,7 @@ def plot_line(data, x, y, title="", **kwargs):
     save_plot(f"line_chart_{title}.png")
 
 def plot_area(data, x, y, title="", **kwargs):
+    """Create an area plot for the given data."""
     plt.figure(figsize=(10, 6))
     plt.fill_between(data[x], data[y], alpha=0.4, **kwargs)
     plt.plot(data[x], data[y], **kwargs)
@@ -155,6 +163,7 @@ def plot_area(data, x, y, title="", **kwargs):
     save_plot(f"area_chart_{title}.png")
 
 def plot_barv(data, x, y, title="", **kwargs):
+    """Create a vertical bar plot for the given data."""
     plt.figure(figsize=(10, 6))
     sns.barplot(data=data, x=x, y=y, **kwargs)
     plt.grid(axis='y')  
@@ -165,6 +174,7 @@ def plot_barv(data, x, y, title="", **kwargs):
     save_plot(f"barv_chart_{title}.png")
 
 def plot_barh(data, x, y, title="", **kwargs):
+    """Create a horizontal bar plot for the given data."""
     plt.figure(figsize=(10, 6))
     sns.barplot(data=data, x=y, y=x, orient='h', **kwargs)
     plt.grid(axis='x') 
@@ -175,6 +185,7 @@ def plot_barh(data, x, y, title="", **kwargs):
     save_plot(f"barh_chart_{title}.png")
 
 def plot_pie(data, x, y, title="", **kwargs):
+    """Create a pie plot for the given data."""
     plt.figure(figsize=(8, 8))
     wedges, texts, autotexts = plt.pie(
         data[y], 
@@ -200,6 +211,7 @@ def plot_pie(data, x, y, title="", **kwargs):
     save_plot(f"pie_chart_{title}.png")
 
 def plot_donut(data, x, y, title="", **kwargs):
+    """Create a donut plot for the given data."""
     plt.figure(figsize=(8, 8))
     wedges, texts, autotexts = plt.pie(
         data[y], 
@@ -227,6 +239,7 @@ def plot_donut(data, x, y, title="", **kwargs):
     save_plot(f"donut_chart_{title}.png")
 
 def plot_scatter(data, x, y, title="", **kwargs):
+    """Create a scatter plot for the given data."""
     plt.figure(figsize=(10, 6))
     sns.scatterplot(data=data, x=x, y=y, **kwargs)
     plt.grid(True)  
@@ -248,7 +261,7 @@ def plot_chart(chart_id, data, title="", **kwargs):
         "scatter": plot_scatter,
     }
 
-    # Default Case
+    # Default Case Is Area Chart
     if chart_id not in chart_mapping:
         chart_id = "area"
 

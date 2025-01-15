@@ -115,8 +115,8 @@ def create_pdf_with_images(text, appendix, data, path):
 
         pdf.line(left_margin, y_position, right_margin, y_position)
         
-        y_start = 50  # Partenza della prima macchina
-
+        y_start = pdf.get_y() #starting position of first machine
+        
         for machine_name, kpis in machines.items():
             for obj in data_for_imgs:
                 if obj["machine"] == machine_name:
@@ -129,11 +129,12 @@ def create_pdf_with_images(text, appendix, data, path):
                     )
                     image_path = f"report_img/{obj['graphical_el']}_chart_{name_to_id(obj['machine'])}_{obj['kpi']}.png"
                 
-                    # Inserisci l'immagine allineata alla posizione y_start (la stessa del nome macchina)
+                    # Insert the image aligned with the corresponding machine name
                     pdf.image(image_path, x=110, y=y_start, w=90)
+            # Add KPIs of the machine to the PDF        
             y_start = add_kpis_to_pdf(pdf, machine_name, kpis, y_start=y_start)
         
-        # Manage Summary
+        # Manage Summary Section
         pdf.add_page()
         pdf.set_font("Arial", size=15, style='B')
         pdf.cell(0, 10, "Summary", ln=True, align='C')
@@ -142,67 +143,64 @@ def create_pdf_with_images(text, appendix, data, path):
         comparisons, rest = summary.split("Predicted Values Insights:")
         insight, suggestions = rest.split("Suggestions:")
 
-        # Impostazioni iniziali del PDF
+        # Machine comparisons subsection
         pdf.set_font("Arial", size=12, style='B')
         pdf.cell(0, 5, "Machine Comparisons:", ln=True)
         pdf.set_font("Arial", size=10)
         pdf.multi_cell(0, 5, comparisons.split("Machine Comparisons:")[1])
         pdf.ln(5)
 
-        # Aggiunta dei grafici delle comparazioni KPI
+        # Add the machine comparison KPI plots
         kpi_data = parse_report_for_computed_kpis(text)
         kpi_names = plot_kpi_comparison(kpi_data)
 
-        # Variabili per il posizionamento delle immagini
+        # Support variables for image positioning
         x_offset = 10
-        y_offset = pdf.get_y() + 5  # Inizia dopo l'ultimo testo scritto
+        y_offset = pdf.get_y() + 5  
         image_width = 80
         image_height = 80
         images_per_row = 2
-        page_width = 210  # Larghezza pagina A4 in mm
+        page_width = 210  
 
-        # Ciclo per aggiungere le immagini
+        # Add the KPI comparison images
         for i, kpi_name in enumerate(kpi_names):
             image_path = f"report_img/{kpi_name}_comparison.png"
             kpi_display_name = kpi_name.replace("_", " ").title()
             
-            # Posizionamento delle immagini: cambio riga quando necessario
+            # Position the images in a grid (2 images per row)
             if i % images_per_row == 0 and i != 0:
-                y_offset += image_height + 10  # Aggiungi spazio dopo una riga di immagini
+                y_offset += image_height + 10  
                 if y_offset + image_height > 290:
                     pdf.add_page()
                     y_offset = 10
-                x_offset = 10  # Torna alla prima colonna
+                x_offset = 10  
                 
-            # Calcola il posizionamento orizzontale per centrare le immagini
+            # Calculate the x offset for the image
             x_offset = (page_width - image_width * images_per_row - 10 * (images_per_row - 1)) / 2 + (i % images_per_row) * (image_width + 10)
 
             pdf.set_xy(x_offset, y_offset)
             pdf.set_font("Arial", size=10, style='B')
             pdf.cell(image_width, 10, kpi_display_name, ln=True, align='C')
             
-            # Aggiungi l'immagine
+            # Add the image to the PDF and update the x offset
             pdf.image(image_path, x=x_offset, y=y_offset + 10, w=image_width, h=image_height)
-            
-            # Aggiusta x_offset per l'immagine successiva
             x_offset += image_width + 10
 
-        # Add a new page for the next section
-        
-        pdf.ln(y_offset + image_height + 10)  # Aggiungi spazio dopo le immagini
+        # Insights subsection
+        pdf.ln(y_offset + image_height + 10)  
         pdf.set_font("Arial", size=12, style='B')
         pdf.cell(0, 5, "Predicted Values Insights:", ln=True)
         pdf.set_font("Arial", size=12)
         pdf.multi_cell(0, 5, insight)
         pdf.ln(5)
 
-        # Add the Suggestions section
+        # Suggestions subsection
         pdf.set_font("Arial", size=12, style='B')
         pdf.cell(0, 5, "Suggestions:", ln=True)
         pdf.set_font("Arial", size=12)
         pdf.multi_cell(0, 5, suggestions)
         
-        # Appendix
+        # Appendix Section
         pdf.add_page()
         pdf.set_font('Arial', 'B', 15)
         pdf.cell(0, 10, 'Appendix', 0, 1, 'C')
@@ -210,12 +208,11 @@ def create_pdf_with_images(text, appendix, data, path):
         appendix = json.loads(appendix)
         for obj in appendix:
             if obj.get("context", None) is not None and obj.get("reference_number", None) is not None and obj.get("source_name", None) is not None:
-                # Stampa il reference number con un formato migliore
                 pdf.set_font("Arial", "B", 12)
                 pdf.cell(190, 5, f"Reference Number: [{str(obj['reference_number'])}]", ln=True, align='L')
                 pdf.set_font("Arial", "", 10)
                 
-                # Stampa il contesto con un formato più leggibile
+                # Add the context of the reference
                 pdf.cell(190, 5, "Context:", ln=True, align='L')
                 lines = obj["context"].split("\n")
                 for line in lines:
@@ -224,21 +221,21 @@ def create_pdf_with_images(text, appendix, data, path):
                     else:
                         pdf.ln()
                 
-                pdf.ln(2)  # Aggiunge una linea di separazione tra il contesto e la sorgente
+                pdf.ln(2) 
                 
-                # Stampa il nome della fonte con colore evidenziato
+                # Print the source name
                 pdf.set_text_color(0, 0, 255)
                 pdf.cell(190, 5, f"Source: {str(obj['source_name'])}", ln=True, align='L')
                 pdf.set_text_color(0, 0, 0)
                 
-                pdf.ln(3)  # Aggiunge spazio tra gli oggetti
+                pdf.ln(3) 
 
-                # Separatore per chiarezza visiva
+                # Add a separator line
                 pdf.set_draw_color(0, 0, 0)
-                pdf.line(10, pdf.get_y(), 200, pdf.get_y())  # Linea orizzontale
-                pdf.ln(3)  # Aggiungi spazio dopo la linea
+                pdf.line(10, pdf.get_y(), 200, pdf.get_y()) 
+                pdf.ln(3)  
         
-        # Remove all images in the report_img directory
+        # Remove all images in the report_img directory to avoid duplicates in the next reports
         files = glob.glob('report_img/*')
         for f in files:
             os.remove(f)

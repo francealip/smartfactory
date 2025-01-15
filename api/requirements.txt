@@ -7,5 +7,3 @@ python-jose==3.3.0
 minio
 langchain
 fpdf==1.7.2
-matplotlib==3.9.4
-seaborn==0.13.2
