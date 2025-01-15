@@ -111,6 +111,9 @@ REQUIREMENTS:
 - If Error_message is not empty in forecasted KPI report the error
 - If Value in computed KPI contains an Error message report the error
 - Nota if the error message contains ":" substitute them with ","
+- Machine Comparisons: provide a detailed comparison of computed KPIs across different machines highlighting performance metrics, identifying machines that are outperforming or underperforming.
+- Predicted Values Insights: Discuss trends and patterns observed in forecasted data.
+- Suggestions: Offer actionable recommendations based on the analyzed KPI values and predicted trends. Focus on areas where performance improvements are needed or opportunities can be seized. Prioritize suggestions by impact and feasibility (e.g., high-impact, low-effort actions). Return as a single text discourse not as a bulleted list
 
 CONTEXT: 
 {_CONTEXT_}

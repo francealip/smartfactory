@@ -183,6 +183,18 @@ async def get_report_bindings(data):
     report_bindings = json.loads(response_content)
     return report_bindings
 
+def get_extra_explanations(context, report_bindings):
+    prompt = prompt_manager.get_prompt("report_extra_explanations").format(
+            _CONTEXT_=context,
+            _BINDINGS_=report_bindings
+    )
+    response = llm_2.invoke(prompt)   
+    
+    # Extract the extra asks as a list of dictionary from the response
+    response_content = response.content.strip('```json\n').strip('\n```')
+    report_bindings = json.loads(response_content)
+    return report_bindings
+
 def extend_kpi_engine_request(report_bindings, start_date, end_date):
     """
     Extends the KPI engine request data to include all dates between the start and end dates.
@@ -653,7 +665,11 @@ async def ask_question(question: Question): # to add or modify the services allo
                 extra_requests = await ask_kpi_engine(extra_kpi_input)
                 extra_requests = ",".join(json.dumps(obj) for obj in extra_requests['data'])
                 extra_requests = "[" + extra_requests + "]" 
-                data = f"{json.dumps(report_bindings)}_SEPARATOR_{extra_requests}"
+                
+                # Explain the extra requests using RAG to create comments on the images
+                explanations = get_extra_explanations(extra_requests, report_bindings)
+                
+                data = f"{json.dumps(report_bindings)}_SEPARATOR_{extra_requests}_SEPARATOR_{explanations}"
                 return Answer(textResponse=textResponse, textExplanation=textExplanation, data=data, label=label)
 
             if label == 'dashboard':

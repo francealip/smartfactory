@@ -4,35 +4,31 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 import re
+import ast
 
 def create_combined_object(data):
-    """
-    Support function that allows to combine bindings and extra requests into a single object from
-    which is easly to create all graphs.
-
+    """ Create a combined object from the input data. And parse the input strings into Python objects.
+    
     Args:
-        data (str): The data string containing the bindings and extra requests, separated by _SEPARATOR_.
-
-    Returns:
-        list: list of dictionaries containing the combined data.
-    """
-    report_bindings_str, extra_requests_str = data.split("_SEPARATOR_")
+        data (str): The input data containing report bindings, extra requests, and explanations.
+        
+        Returns:
+        tuple: A tuple containing the combined object and explanations object."""
+    report_bindings_str, extra_requests_str, explanations_str = data.split("_SEPARATOR_")
+    explanations = ast.literal_eval(explanations_str)
+    
     extra_requests_str = extra_requests_str.replace('”', '"').replace('“', '"')
     # Parse the input strings into Python objects
     report_bindings = json.loads(report_bindings_str)
     extra_requests = json.loads(extra_requests_str)
     
-    print(report_bindings)
-
     # Create a mapping of machine and KPI to the relevant dates
     period_data = [request["Date_Start"] for request in extra_requests]
     period_data = list(set(period_data))
     
     start_date = datetime.strptime(min(period_data), '%Y-%m-%d')
     end_date = datetime.strptime(max(period_data), '%Y-%m-%d')
-    
-    print(start_date, end_date)
-    
+        
     # Combine the data into the desired structure
     combined_objects = []
     for binding in report_bindings:
@@ -66,7 +62,7 @@ def create_combined_object(data):
             "values": values
         })
 
-    return combined_objects
+    return combined_objects, explanations
 
 def parse_report_for_computed_kpis(report):
     """Extracts calculated KPIs for each machine from the report text, removes units, 
@@ -93,7 +89,6 @@ def parse_report_for_computed_kpis(report):
             kpi_dict = {'machine': machine_name.replace(" --", "")}
             
             for kpi in computed_kpis:
-                print(kpi)
                 kpi_name, kpi_value = kpi.split(":")
                 try:
                     kpi_value = float(re.sub(r'[^\d.]', '', kpi_value.strip()))

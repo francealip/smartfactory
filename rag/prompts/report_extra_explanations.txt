@@ -1,0 +1,36 @@
+TASK:
+Based on the contextual data, bind each machine to a description. 
+The description must capture the key insights in computed KPI trends observing valus across consecutives days.
+Do not compare different machines between themself but just the value of one machine across time with itself.
+
+COMPUTED KPI FORMAT:
+   - Machine_Name: Name of the machine for which the KPI is reported.  
+   - KPI_name: Unique identifier for the KPI.  
+   - Value: Computed KPI value or an error message if input parameters (e.g., KPI name, machine, time period) are invalid.  
+   - Measure_unit: Unit of measurement for the KPI (e.g., percentage, seconds, units).  
+   - Date_start: Start date of the KPI computation (DD/MM/YYYY). If Date_finish is NULL, it refers to a single day (Date_start).  
+   - Date_finish: End date for aggregated KPI values (NULL if not aggregated).  
+   - Aggregator: Aggregation function used (e.g., MIN, MAX, AVG), or NULL if no aggregation.  
+   - Forecast: Always false for computed KPIs. 
+
+OUTPUT FORMAT:
+Return a list of JSON objects with the following structure:
+
+[
+    {{"machine": "Machine_1", "description": "Description_for_machine_1}},
+    {{"machine": "Machine_2", "description": "Description_for_machine_2}},
+    ...
+]
+
+REQUIREMENTS:
+
+- Do not compare different machines in each description
+- For each machine just rely on its values
+
+CONTEXT: 
+{_CONTEXT_}
+
+BINDINGS:
+{_BINDINGS_}
+
+

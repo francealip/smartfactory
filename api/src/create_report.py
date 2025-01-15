@@ -82,8 +82,16 @@ def create_pdf_with_images(text, appendix, data, path):
             page_width = self.w
             self.set_x(page_width - 20)
             self.cell(0, 10, f"Page {self.page_no()}", align='R')
+        
+        def header(self):
+
+            self.set_y(5)
+            self.set_font("Arial", size=10)
+            self.set_text_color(0, 0, 0)
+            # Add the header
+            self.cell(0, 10, "Smartfactory - Report", ln=True, align='C')
             
-    data_for_imgs = create_combined_object(data)
+    data_for_imgs, explanations = create_combined_object(data)
     
     # Parse the report
     metadata, machines, summary = parse_report(text)
@@ -115,7 +123,7 @@ def create_pdf_with_images(text, appendix, data, path):
 
         pdf.line(left_margin, y_position, right_margin, y_position)
         
-        y_start = pdf.get_y() #starting position of first machine
+        y_start = pdf.get_y()+5 #starting position of first machine
         
         for machine_name, kpis in machines.items():
             for obj in data_for_imgs:
@@ -131,6 +139,13 @@ def create_pdf_with_images(text, appendix, data, path):
                 
                     # Insert the image aligned with the corresponding machine name
                     pdf.image(image_path, x=110, y=y_start, w=90)
+                    # Add text description next to the image
+                    pdf.set_xy(110, y_start+60)
+                    pdf.set_font("Arial", size=10)
+                    for expl in explanations:
+                        if expl["machine"] == machine_name:
+                            pdf.multi_cell(90, 5, expl["description"], align='L', border=1)
+                            break
             # Add KPIs of the machine to the PDF        
             y_start = add_kpis_to_pdf(pdf, machine_name, kpis, y_start=y_start)
         
@@ -146,7 +161,7 @@ def create_pdf_with_images(text, appendix, data, path):
         # Machine comparisons subsection
         pdf.set_font("Arial", size=12, style='B')
         pdf.cell(0, 5, "Machine Comparisons:", ln=True)
-        pdf.set_font("Arial", size=10)
+        pdf.set_font("Arial", size=12)
         pdf.multi_cell(0, 5, comparisons.split("Machine Comparisons:")[1])
         pdf.ln(5)
 
