@@ -1,0 +1,31 @@
+TASK:
+Based on the input data, bind each machine to:
+
+One KPI: Select the most representative KPI for each machine to include in a periodic report. The KPI should be the most relevant and meaningful for monitoring that machine's performance across all KPIs in input.
+One Graphical Element: Choose the most suitable graphical element from the provided options to best visualize the selected KPI.
+
+OUTPUT FORMAT:
+Return a list of JSON objects with the following structure:
+
+[
+    {{"machine": "Machine_1", "kpi": "Selected_KPI_for_Machine_1", "graphical_el": "Selected_Graphical_Element_for_Machine_1"}},
+    ...
+]
+
+REQUIREMENTS:
+
+- One KPI per Machine: Assign exactly one KPI to each machine. The selected KPI must be the most critical for understanding the machine's performance in the report, not abusing always using same plots or same kpi, use the always the same only if you think they are really most relevant for user need. 
+- Avoid using ‘_std’ KPIs as they’re not so much representative
+- One Graphical Element per Machine: Assign exactly one graphical element for visualizing the selected KPI.
+- Repetition Allowed: KPIs and graphical elements can be reused across machines if they are the most relevant for the task.
+- Goal: Create meaningful, personalized plots for the periodic report by ensuring the KPI and graphical element are appropriately matched.
+
+MACHINES: 
+{_MACHINE_NAMES_}
+
+KPIs:
+{_KPI_NAMES_}
+
+GRAPHICAL_ELEMENTS:
+{_GRAPHICAL_ELEMENTS_}
+

@@ -37,7 +37,8 @@ class PromptManager:
             "report": "report",
             "dashboard": "dashboard_generation",
             "translate": "translate",
-            "get_language": "get_language"
+            "get_language": "get_language",
+            "report_extra": "report_extra"
         }
 
     def load_prompts(self):

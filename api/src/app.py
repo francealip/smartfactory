@@ -38,7 +38,7 @@ from model.user import *
 from notification_service import send_notification, retrieve_alerts, send_report
 from user_settings_service import persist_user_settings, retrieve_user_settings, persist_dashboard_settings, \
     load_dashboard_settings
-
+from create_report import create_pdf_with_images
 env_path = Path(__file__).resolve().parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
@@ -527,9 +527,9 @@ def create_report_pdf(answer: Answer, userId: str, tmp_path: str, obj_name: str,
     obj_path = "/reports/" + userId + "/" + obj_name + ".pdf"
     # if answer is a dict, access the data via ['data']
     if isinstance(answer, dict):
-        create_pdf(answer["data"], answer["textExplanation"], tmp_path)
+        create_pdf_with_images(answer["textResponse"], answer["textExplanation"], answer["data"], tmp_path)
     else:
-        create_pdf(answer.data, answer.textExplanation, tmp_path)
+        create_pdf_with_images(answer.textResponse, answer.textExplanation, answer.data, tmp_path)
     minio = get_minio_connection()
     upload_object(minio, "reports", userId + "/" + obj_name + ".pdf", tmp_path, "application/pdf")
     query_insert = "INSERT INTO Reports (Name, Type, OwnerId, GeneratedAt, FilePath, SiteName) VALUES (%s, %s, %s, %s, %s, %s) RETURNING ReportID, Name, Type;"
@@ -540,56 +540,6 @@ def create_report_pdf(answer: Answer, userId: str, tmp_path: str, obj_name: str,
     response = cursor.fetchone()
     close_connection(connection, cursor)
     return response[0]
-
-
-def create_pdf(text: str, appendix: str, path: str):
-    """
-    This function creates a PDF file.
-    Args:
-        text: the text of the PDF.
-        appendix: the appendix of the PDF.
-        path: the path where to save the PDF.
-    """
-    pdf = FPDF()
-    try:
-        pdf.set_font('Arial', '', 12)
-        pdf.add_page()
-        lines = text.split("\n")
-        for line in lines:
-            if len(line) > 0:
-                pdf.multi_cell(190, 5, line)
-            else:
-                pdf.ln()
-        pdf.add_page()
-        pdf.set_font('Arial', 'B', 12)
-        pdf.cell(190, 5, "Explanation")
-        pdf.ln()
-        pdf.ln()
-        pdf.set_font('Arial', '', 12)
-        appendix = json.loads(appendix)
-        for obj in appendix:
-            if obj.get("context", None) is not None and obj.get("reference_number", None) is not None and obj.get(
-                    "source_name", None) is not None:
-                pdf.cell(190, 5, "[" + str(obj["reference_number"]) + "]")
-                pdf.ln()
-                pdf.cell(190, 5, "Context:")
-                lines = obj["context"].split("\n")
-                for line in lines:
-                    if len(line) > 0:
-                        pdf.multi_cell(190, 5, line)
-                    else:
-                        pdf.ln()
-                pdf.ln()
-                pdf.set_text_color(0, 0, 255)
-                pdf.cell(190, 5, "Source: " + str(obj["source_name"]))
-                pdf.set_text_color(0, 0, 0)
-                pdf.ln()
-                pdf.ln()
-    except Exception as e:
-        exc_type, exc_obj, exc_tb = sys.exc_info()
-        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-        print(exc_type, fname, exc_tb.tb_lineno)
-    pdf.output(name=path, dest="F")
 
 
 @app.post("/smartfactory/reports/generate", status_code=status.HTTP_201_CREATED)

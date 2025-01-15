@@ -22,7 +22,7 @@ from collections import deque
 from dotenv import load_dotenv
 #from .api_auth.api_auth import get_verify_api_key
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
 from watchdog.observers import Observer
@@ -92,7 +92,8 @@ observer.schedule(event_handler, os.environ['KB_FILE_PATH'], recursive=True)
 observer.start()"""
 
 # Initialize the LLM model
-llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash")
+llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", api_key=os.getenv("GEMINI_KEY_1"))
+llm_2 = ChatGoogleGenerativeAI(model="gemini-1.5-flash", api_key=os.getenv("GEMINI_KEY_2"))
 
 # Initialize the conversation history deque
 history = {}
@@ -153,6 +154,77 @@ def prompt_classifier(input: Question):
         
     return label, json_request, all_kpis
 
+async def get_report_bindings(data):
+    """
+    Extracts extra KPI engine requests from the KPI engine response.
+
+    This function extracts machine names, KPIs and GUI elements best bindings
+    
+    Args:
+        data : array of json request to kpi engine
+        
+    Returns:
+        report_bindings: The list of binding machine-kpi-gui_el to be plotted in the report
+    """
+    # Extract machine names and KPI names from the KPI engine response
+    machine_names = list({item['Machine_Name'] for item in data})
+    kpi_names = list({item['KPI_Name'] for item in data})
+
+    # Ask the model for best bindings to generate images for the report
+    prompt = prompt_manager.get_prompt("report_extra").format(
+            _GRAPHICAL_ELEMENTS_=read_gui_elements(),
+            _KPI_NAMES_=kpi_names,
+            _MACHINE_NAMES_=machine_names
+    )
+    response = llm_2.invoke(prompt)   
+    
+    # Extract the extra asks as a list of dictionary from the response
+    response_content = response.content.strip('```json\n').strip('\n```')
+    report_bindings = json.loads(response_content)
+    return report_bindings
+
+def extend_kpi_engine_request(report_bindings, start_date, end_date):
+    """
+    Extends the KPI engine request data to include all dates between the start and end dates.
+
+    Args:
+        report bindings (list): The list of bindings machine-kpi-gui_element.
+        start_date (str): The start date of the request.
+        end_date (str): The end date of the request.
+        
+    Returns:
+        list: The extended list of KPI engine requests.
+    """
+    extended_requests = []
+
+    for request in report_bindings:
+        i = start_date
+        while i <= end_date:
+            extended_requests.append({
+                'Date_Start': i.strftime('%Y-%m-%d'),
+                'Date_Finish': i.strftime('%Y-%m-%d'),
+                'Machine_Name': request['machine'],
+                'KPI_Name': request['kpi']
+            })
+            i += timedelta(days=1)
+    
+    return extended_requests
+
+def read_gui_elements():  
+    """
+    Read the GUI elements from the predefined JSON file.
+    
+    Returns:
+        str: A string containing the GUI elements in JSON format.
+    """  
+    with open("docs/gui_elements.json", "r") as f:
+        chart_types = json.load(f)
+    gui_elements = json.dumps(chart_types["charts"]).replace('‘', "'").replace('’', "'")
+    gui_elements = ",".join(json.dumps(element) for element in chart_types["charts"])
+    
+    return gui_elements
+
+
 async def ask_kpi_engine(json_body):
     """
     Function to query the KPI engine for machine data.
@@ -166,7 +238,7 @@ async def ask_kpi_engine(json_body):
             Otherwise, it will return an error message.
     """
     kpi_engine_url = "http://smartfactory-kpi-engine-1:8000/kpi/calculate"
-
+    
     async with httpx.AsyncClient(timeout=httpx.Timeout(10.0)) as client:
         try:
             response = await client.post(kpi_engine_url,json=json_body,headers=HEADER)
@@ -250,7 +322,7 @@ async def handle_predictions(json_body):
         response = ",".join(json.dumps(obj) for obj in response['data']['value'])
     else:
         response = json.dumps(response['data'])
-
+    
     return response
 
 async def handle_new_kpi(question: Question, llm, graph, history):
@@ -300,10 +372,14 @@ async def handle_report(json_objs):
 
     if kpi_response['success'] == True:
         kpi_response = ",".join(json.dumps(obj) for obj in kpi_response['data'])
+        report_bindings = await get_report_bindings(json_objs[0])
+        start_date = datetime.strptime(json_objs[0][0]['Date_Start'], '%Y-%m-%d')
+        end_date = datetime.strptime(json_objs[0][0]['Date_Finish'], '%Y-%m-%d')
     else:
         kpi_response = json.dumps(kpi_response['data'])
-        
-    return "PRED_CONTEXT:" + predictor_response + "\nENG_CONTEXT:" + kpi_response
+            
+    return "PRED_CONTEXT:" + predictor_response + "\nENG_CONTEXT:" + kpi_response, report_bindings, start_date, end_date 
+
 
 async def handle_dashboard(question: Question, llm, graph, history):
     """
@@ -321,10 +397,7 @@ async def handle_dashboard(question: Question, llm, graph, history):
     Returns:
         str: The response string containing both knowledge base and GUI elements context.
     """
-    with open("docs/gui_elements.json", "r") as f:
-        chart_types = json.load(f)
-    gui_elements = json.dumps(chart_types["charts"]).replace('‘', "'").replace('’', "'")
-    gui_elements = ",".join(json.dumps(element) for element in chart_types["charts"])
+    gui_elements = read_gui_elements()
     dashboard_generation = DashboardGenerationChain(llm, graph, history)
     response = dashboard_generation.chain.invoke(question.userInput)
     return 'KB_CONTEXT:' + response['result'] + '\n GUI_CONTEXT:' + gui_elements
@@ -444,8 +517,11 @@ async def ask_question(question: Question): # to add or modify the services allo
                 
             return Answer(textResponse=llm_result.content, textExplanation='', data='', label='kb_q') 
 
-        # Execute the handler
+        # Execute the handler and extract contextual informations
         context = await handlers[label]()
+        if label == 'report':
+            context, report_bindings, start_date, end_date = context
+            
         #eventually add the log error if user tried to ask for all kpis
         if all_kpis == query_gen.ERROR_NO_KPIS:
             context+="\nError: You can't calculate/predict for no kpis, try again with at least one kpi.\n"
@@ -474,7 +550,7 @@ async def ask_question(question: Question): # to add or modify the services allo
                 _USER_QUERY_=question.userInput,
                 _CONTEXT_=context
             )
-            
+                        
             # Initialize a thread pool executor for asynchronous task execution
             executor = ThreadPoolExecutor()
 
@@ -497,6 +573,7 @@ async def ask_question(question: Question): # to add or modify the services allo
                 explainer.add_to_context([("Knowledge Base", context_cleaned)])
 
             if label == 'report':
+                extra_kpi_input = extend_kpi_engine_request(report_bindings, start_date, end_date)
                 # Split the context into prediction and KPI engine parts using known prefixes
                 pred_context, eng_context = context.removeprefix("PRED_CONTEXT:").split("ENG_CONTEXT:")
                 # Format the prediction and KPI engine contexts with square brackets
@@ -529,19 +606,12 @@ async def ask_question(question: Question): # to add or modify the services allo
                 if question_language.lower() != "english":
                     llm_result = await translate_answer(question, question_language, llm_result.content)
 
-            # Handle the 'predictions' label
-            if label == 'predictions':
+            # Handle the 'predictions' and 'kpi_calc' label
+            if label in ['predictions','kpi_calc']:
                 # Attribute the LLM result content to the context using the explainer
                 textResponse, textExplanation, _ = explainer.attribute_response_to_context(llm_result.content)
                 # Return the formatted response as an Answer object
                 return Answer(textResponse=textResponse, textExplanation=textExplanation, data='', label=label)
-
-            # Handle the 'kpi_calc' label
-            if label == 'kpi_calc':
-                # Attribute the LLM result content to the context using the explainer
-                textResponse, textExplanation, _ = explainer.attribute_response_to_context(llm_result.content)
-                # Return the formatted response as an Answer object
-                return Answer(textResponse=textResponse, textExplanation=textExplanation, data="", label=label)
 
             # Handle the 'new_kpi' label
             if label == 'new_kpi':
@@ -580,7 +650,11 @@ async def ask_question(question: Question): # to add or modify the services allo
                 # Attribute the LLM result content to the context using the explainer
                 textResponse, textExplanation, _ = explainer.attribute_response_to_context(llm_result.content)
                 # Return an Answer object with explanation and the response text as data
-                return Answer(textResponse="", textExplanation=textExplanation, data=textResponse, label=label)
+                extra_requests = await ask_kpi_engine(extra_kpi_input)
+                extra_requests = ",".join(json.dumps(obj) for obj in extra_requests['data'])
+                extra_requests = "[" + extra_requests + "]" 
+                data = f"{json.dumps(report_bindings)}_SEPARATOR_{extra_requests}"
+                return Answer(textResponse=textResponse, textExplanation=textExplanation, data=data, label=label)
 
             if label == 'dashboard':
                 # Converting the JSON string to a dictionary
@@ -598,5 +672,6 @@ async def ask_question(question: Question): # to add or modify the services allo
                 
                 data = json.dumps(response_json["bindings"], indent=2)
                 return Answer(textResponse=textResponse, textExplanation=textExplanation, data=data, label=label)
-    except Exception as e:
+    except Exception as e:  
+        print(e)       
         return Answer(textResponse="Something gone wrong, I'm not able to answer your question", textExplanation="", data="", label="Error")

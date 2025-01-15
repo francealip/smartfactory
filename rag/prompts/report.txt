@@ -106,10 +106,11 @@ Suggestions:
 REQUIREMENTS:
 - Ensure the report is clear and error-free, with no redundant text such as "Here’s your report."
 - Use the input JSON to compute summaries accurately; if data is missing, explicitly state its absence.
-- Respond strictly in the requested report format.
+- Respond strictly in the requested report format, creating always all the sections.
 - For a machine reports only the forecasted KPIs, if there are no forecasted values, please don't put in the report the "Forecasted KPIs" section for the machines with no forecasted values
 - If Error_message is not empty in forecasted KPI report the error
 - If Value in computed KPI contains an Error message report the error
+- Nota if the error message contains ":" substitute them with ","
 
 CONTEXT: 
 {_CONTEXT_}
